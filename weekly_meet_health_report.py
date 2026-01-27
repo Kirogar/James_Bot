@@ -207,16 +207,19 @@ def main():
             print(f"    - {w['id']} | {f(w,'System.Title')} | TargetDate={td_txt}")
             print(f"      {wi_url(w['id'])}")
 
-    # Detailed per-state output
+    # Detailed output: only show states that have issues (RED/YELLOW/MISSING)
+    any_date_issues = False
     for state in STATES:
         buckets = state_buckets[state]
+        if not (buckets["RED"] or buckets["YELLOW"] or buckets["MISSING"]):
+            continue
 
-        print(f"\nSTATE = {state}")
+        any_date_issues = True
+        print(f"\nSTATE = {state} (issues only)")
         print(
-            f"  GREEN={len(buckets['GREEN'])} | YELLOW={len(buckets['YELLOW'])} | RED={len(buckets['RED'])} | MISSING TargetDate={len(buckets['MISSING'])}"
+            f"  YELLOW={len(buckets['YELLOW'])} | RED={len(buckets['RED'])} | MISSING TargetDate={len(buckets['MISSING'])}"
         )
 
-        # List only the problematic ones by default
         if buckets["RED"]:
             print("  RED (TargetDate in the past):")
             for w in buckets["RED"]:
@@ -233,7 +236,7 @@ def main():
                 print(f"    - {w['id']} | {f(w,'System.Title')}")
                 print(f"      {wi_url(w['id'])}")
 
-    # Data quality checks
+    # Data quality checks (print header only if there are issues)
     print("\nDATA QUALITY")
     print(f"  Progress Status field used: {progress_status_field}")
     print(f"  Progress Info field used: {progress_info_field}")
@@ -256,21 +259,24 @@ def main():
             if pi is None or (isinstance(pi, str) and pi.strip() == ""):
                 amber_missing_info.append(w)
 
-    if not missing_progress_status:
-        print("  OK: All features have Progress Status")
-    else:
+    any_dq_issues = False
+
+    if missing_progress_status:
+        any_dq_issues = True
         print(f"  Missing Progress Status: {len(missing_progress_status)}")
         for w in missing_progress_status:
             print(f"    - {w['id']} | {f(w,'System.State')} | {f(w,'System.Title')}")
             print(f"      {wi_url(w['id'])}")
 
-    if not amber_missing_info:
-        print(f"  OK: All '{AMBER_VALUE}' features have Progress Info")
-    else:
+    if amber_missing_info:
+        any_dq_issues = True
         print(f"  '{AMBER_VALUE}' but missing Progress Info: {len(amber_missing_info)}")
         for w in amber_missing_info:
             print(f"    - {w['id']} | {f(w,'System.State')} | {f(w,'System.Title')}")
             print(f"      {wi_url(w['id'])}")
+
+    if not any_date_issues and not any_dq_issues:
+        print("\nALL OK: No TargetDate risks and no Progress field issues found.")
 
     return 0
 
