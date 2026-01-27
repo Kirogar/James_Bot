@@ -171,7 +171,12 @@ def main():
                 if di:
                     progress_info_field = di
 
-    # Per-state traffic light
+    def wi_url(wid: int):
+        # Human-clickable ADO link
+        return f"{ADO}/{urllib.parse.quote(PROJECT)}/_workitems/edit/{wid}"
+
+    # Per-state traffic light (also keep buckets for executive summary)
+    state_buckets = {}
     for state in STATES:
         ids = ids_by_state[state]
         rows = [items[i] for i in ids if i in items]
@@ -180,6 +185,31 @@ def main():
         for w in rows:
             color = classify_target_date(f(w, TARGET_DATE_FIELD), today, next_monday)
             buckets[color].append(w)
+
+        state_buckets[state] = buckets
+
+    # Executive summary (top of the report)
+    print("\nSUMMARY (quick) — focus: In Progress risks")
+    ip = state_buckets.get("In Progress", {"RED": [], "YELLOW": [], "GREEN": [], "MISSING": []})
+    print(
+        f"  In Progress: GREEN={len(ip['GREEN'])} | YELLOW(next week)={len(ip['YELLOW'])} | RED(past)={len(ip['RED'])} | MISSING TargetDate={len(ip['MISSING'])}"
+    )
+
+    # Show up to 3 most urgent items: missing TargetDate first, then RED
+    urgent = (ip.get("MISSING") or []) + (ip.get("RED") or [])
+    if not urgent:
+        print("  Top issues: none")
+    else:
+        print("  Top issues (up to 3):")
+        for w in urgent[:3]:
+            td = f(w, TARGET_DATE_FIELD)
+            td_txt = td if td else "MISSING"
+            print(f"    - {w['id']} | {f(w,'System.Title')} | TargetDate={td_txt}")
+            print(f"      {wi_url(w['id'])}")
+
+    # Detailed per-state output
+    for state in STATES:
+        buckets = state_buckets[state]
 
         print(f"\nSTATE = {state}")
         print(
@@ -191,14 +221,17 @@ def main():
             print("  RED (TargetDate in the past):")
             for w in buckets["RED"]:
                 print(f"    - {w['id']} | {f(w,'System.Title')} | TargetDate={f(w, TARGET_DATE_FIELD)}")
+                print(f"      {wi_url(w['id'])}")
         if buckets["YELLOW"]:
             print("  YELLOW (TargetDate next calendar week):")
             for w in buckets["YELLOW"]:
                 print(f"    - {w['id']} | {f(w,'System.Title')} | TargetDate={f(w, TARGET_DATE_FIELD)}")
+                print(f"      {wi_url(w['id'])}")
         if buckets["MISSING"]:
             print("  MISSING TargetDate:")
             for w in buckets["MISSING"]:
                 print(f"    - {w['id']} | {f(w,'System.Title')}")
+                print(f"      {wi_url(w['id'])}")
 
     # Data quality checks
     print("\nDATA QUALITY")
@@ -229,6 +262,7 @@ def main():
         print(f"  Missing Progress Status: {len(missing_progress_status)}")
         for w in missing_progress_status:
             print(f"    - {w['id']} | {f(w,'System.State')} | {f(w,'System.Title')}")
+            print(f"      {wi_url(w['id'])}")
 
     if not amber_missing_info:
         print(f"  OK: All '{AMBER_VALUE}' features have Progress Info")
@@ -236,6 +270,7 @@ def main():
         print(f"  '{AMBER_VALUE}' but missing Progress Info: {len(amber_missing_info)}")
         for w in amber_missing_info:
             print(f"    - {w['id']} | {f(w,'System.State')} | {f(w,'System.Title')}")
+            print(f"      {wi_url(w['id'])}")
 
     return 0
 
