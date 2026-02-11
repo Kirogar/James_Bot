@@ -125,7 +125,8 @@ def get_child_ids(parent_id: int) -> list[int]:
 
     ids = []
     for u in child_urls:
-        m = re.search(r"/workitems/(\d+)$", u)
+        # ADO sometimes returns .../workItems/<id> (capital I)
+        m = re.search(r"/workitems/(\d+)$", u, re.IGNORECASE)
         if m:
             ids.append(int(m.group(1)))
     return ids
