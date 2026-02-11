@@ -18,6 +18,16 @@ Checks:
 python3 weekly_meet_report.py
 ```
 
+## MEET report: EEM Portfolio tagged MEET but missing AGI\\MEET child feature
+
+Finds Features in **EEM Portfolio** that have tag **MEET** but do **not** have any child Feature in **AGI** under area **AGI\\MEET**.
+
+### Run
+
+```bash
+python3 meet_missing_child_report.py
+```
+
 ### Auth
 
 Uses Azure DevOps PAT from either:
