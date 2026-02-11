@@ -44,6 +44,9 @@ def wi_url(project: str, wid: int) -> str:
     return f"{ADO}/{urllib.parse.quote(project)}/_workitems/edit/{wid}"
 
 
+PARENT_STATE = "Ready For Delivery"
+
+
 def wiql_parent_meet_features() -> list[int]:
     # Note: Tags are semi-colon separated string. CONTAINS works.
     wiql = {
@@ -53,6 +56,7 @@ FROM WorkItems
 WHERE
   [System.TeamProject] = '{PARENT_PROJECT}'
   AND [System.WorkItemType] = 'Feature'
+  AND [System.State] = '{PARENT_STATE}'
   AND [System.Tags] CONTAINS '{MEET_TAG}'
 """
     }
@@ -105,7 +109,7 @@ def main() -> int:
     print(f"MEET missing child report — {now.strftime('%Y-%m-%d %H:%M %Z')}")
 
     parent_ids = wiql_parent_meet_features()
-    print(f"Found {len(parent_ids)} EEM Portfolio Features tagged '{MEET_TAG}'")
+    print(f"Found {len(parent_ids)} EEM Portfolio Features with state='{PARENT_STATE}' tagged '{MEET_TAG}'")
 
     parents = batch_get(
         parent_ids,
@@ -173,4 +177,8 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    try:
+        raise SystemExit(main())
+    except BrokenPipeError:
+        # Allows piping to `head` without a noisy traceback
+        raise SystemExit(0)

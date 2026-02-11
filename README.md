@@ -20,7 +20,7 @@ python3 weekly_meet_report.py
 
 ## MEET report: EEM Portfolio tagged MEET but missing AGI\\MEET child feature
 
-Finds Features in **EEM Portfolio** that have tag **MEET** but do **not** have any child Feature in **AGI** under area **AGI\\MEET**.
+Finds Features in **EEM Portfolio** that have state **Ready For Delivery** and tag **MEET** but do **not** have any child Feature in **AGI** under area **AGI\\MEET**.
 
 ### Run
 
