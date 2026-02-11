@@ -15,7 +15,7 @@ API = "7.1"
 
 PARENT_PROJECT = "EEM Portfolio"
 CHILD_PROJECT = "AGI"
-CHILD_AREA = "AGI\\MEET"
+CHILD_TEAM = "MEET Team"  # board/team in ADO
 
 # Tag to look for in System.Tags
 MEET_TAG = "MEET"
@@ -42,6 +42,37 @@ AUTH = ("", PAT)
 def wi_url(project: str, wid: int) -> str:
     # Human clickable link
     return f"{ADO}/{urllib.parse.quote(project)}/_workitems/edit/{wid}"
+
+
+def get_team_area_rules(project: str, team: str):
+    """Return list of (areaPath, includeChildren) used by a Team/Board."""
+    url = (
+        f"{ADO}/{urllib.parse.quote(project)}/{urllib.parse.quote(team)}"
+        f"/_apis/work/teamsettings/teamfieldvalues?api-version=7.1-preview.1"
+    )
+    r = requests.get(url, auth=AUTH, timeout=30)
+    if r.status_code != 200:
+        raise RuntimeError(f"teamfieldvalues failed HTTP={r.status_code}: {r.text[:400]}")
+
+    vals = r.json().get("values") or []
+    rules = []
+    for v in vals:
+        ap = v.get("value")
+        inc = bool(v.get("includeChildren"))
+        if ap:
+            rules.append((ap, inc))
+    return rules
+
+
+def area_matches(area_path: str | None, rules) -> bool:
+    if not area_path:
+        return False
+    for base, include_children in rules:
+        if area_path == base:
+            return True
+        if include_children and area_path.startswith(base + "\\"):
+            return True
+    return False
 
 
 PARENT_STATE = "Ready For Delivery"
@@ -108,6 +139,10 @@ def main() -> int:
     now = datetime.datetime.now().astimezone()
     print(f"MEET missing child report — {now.strftime('%Y-%m-%d %H:%M %Z')}")
 
+    team_area_rules = get_team_area_rules(CHILD_PROJECT, CHILD_TEAM)
+    rules_txt = ", ".join([f"{a} (+children)" if inc else a for a, inc in team_area_rules])
+    print(f"Child board/team: {CHILD_PROJECT} / {CHILD_TEAM} (areas: {rules_txt})")
+
     parent_ids = wiql_parent_meet_features()
     print(f"Found {len(parent_ids)} EEM Portfolio Features with state='{PARENT_STATE}' tagged '{MEET_TAG}'")
 
@@ -151,7 +186,11 @@ def main() -> int:
                 ],
             )
             for c in children:
-                if f(c, "System.TeamProject") == CHILD_PROJECT and f(c, "System.AreaPath") == CHILD_AREA and f(c, "System.WorkItemType") == "Feature":
+                if (
+                    f(c, "System.TeamProject") == CHILD_PROJECT
+                    and f(c, "System.WorkItemType") == "Feature"
+                    and area_matches(f(c, "System.AreaPath"), team_area_rules)
+                ):
                     has_meet_child = True
                     break
 
@@ -160,7 +199,7 @@ def main() -> int:
 
         time.sleep(0.05)
 
-    print(f"\nMissing child features in {CHILD_PROJECT}/{CHILD_AREA}: {len(missing)}")
+    print(f"\nMissing child features on board '{CHILD_TEAM}' in {CHILD_PROJECT}: {len(missing)}")
     if not missing:
         print("OK (keine fehlenden Child Features gefunden)")
         return 0
