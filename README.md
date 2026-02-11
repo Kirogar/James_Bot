@@ -20,9 +20,9 @@ python3 weekly_meet_report.py
 
 ## MEET report: EEM Portfolio tagged MEET but missing AGI\\MEET child feature
 
-Finds Features in **EEM Portfolio** that have state **Ready For Delivery** and tag **MEET** but do **not** have any child Feature on the **AGI / MEET Team** board.
+Finds Features in **EEM Portfolio** that have state **Ready For Delivery** and tag **MEET** but do **not** have any child Feature in **AGI** under area **AGI\\MEET**.
 
-Implementation detail: the script reads the MEET Team's configured **Area Paths** via the Azure DevOps Team Settings API and matches children by those area paths (incl. "include children" paths).
+Implementation detail: it searches all child Features in **AGI\\MEET** (including sub-areas) and resolves their parents via the Hierarchy link, then outputs the parents that are missing from that set.
 
 ### Run
 
